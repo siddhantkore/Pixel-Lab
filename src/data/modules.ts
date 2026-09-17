@@ -7,8 +7,8 @@ export const modules: Module[] = [
     description: "Pixels, color spaces, sampling, quantization and basic manipulations.",
     icon: "Image",
     color: "from-sky-500 to-blue-600",
-    experimentIds: ["e1", "e2"],
-  },
+    experimentIds: ["e-sq", "e1", "e2"],
+},
   {
     id: "m2",
     title: "Image Enhancement (Spatial)",

@@ -6,8 +6,8 @@ export interface Module {
   id: ModuleId;
   title: string;
   description: string;
-  icon: string;           // lucide icon name
-  color: string;          // tailwind gradient classes
+  icon: string;
+  color: string;
   experimentIds: ExperimentId[];
 }
 
@@ -29,30 +29,43 @@ export interface Operation {
   name: string;
   description: string;
   parameters: ParameterDef[];
-  pythonCode: string;             // snippet shown to student
+  pythonCode: string;
   apply: (
     canvas: HTMLCanvasElement,
     params: Record<string, number | string | boolean>
   ) => Promise<void> | void;
 }
 
+export type ResourceType = "paper" | "ppt" | "blog" | "video" | "docs";
+
 export interface Resource {
-  type: "paper" | "ppt" | "blog" | "video" | "docs";
+  type: ResourceType;
   title: string;
   url: string;
   source?: string;
   year?: number;
 }
 
+/** Parsed from markdown frontmatter + body */
 export interface Experiment {
   id: ExperimentId;
   moduleId: ModuleId;
   title: string;
   aim: string;
-  theory: string;              // markdown-lite string
-  operationIds: OperationId[];
-  resources: Resource[];
-  sampleImage?: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced";
-  estimatedTime: string;       // e.g. "20 min"
+  estimatedTime: string;
+  sampleImage?: string;
+  operationIds: OperationId[];
+
+  // Pedagogical blocks (frontmatter)
+  coreConcept: string;
+  formula: string;
+  intuition: string;
+  procedure: string[];
+  applications: string[];
+  pythonCode: string;
+  resources: Resource[];
+
+  // Free-form markdown body (## Theory ...)
+  theoryMarkdown: string;
 }

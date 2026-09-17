@@ -1,8 +1,6 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { modules } from "../data/modules";
-import { getExperimentsByModule } from "../data/experiments";
-import { Card } from "../components/common/Card";
+import { getExperimentsByModule } from "../lib/markdown";   // ← changed
 import { Breadcrumbs } from "../components/common/Breadcrumbs";
 import { ExperimentCard } from "../components/lab/ExperimentCard";
 

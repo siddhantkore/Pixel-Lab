@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, FlaskConical, BookOpen, Download } from "lucide-react";
 import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE } from "../lib/constants";
 import { modules } from "../data/modules";
-import { experiments } from "../data/experiments";
+import { experiments } from "../lib/markdown";   // ← changed
 import { Card } from "../components/common/Card";
 
 export const Home: React.FC = () => (
