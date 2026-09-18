@@ -1,0 +1,60 @@
+{
+  "id": "e-setup",
+  "moduleId": "m1",
+  "title": "Environment Setup & OpenCV Basics",
+  "aim": "Install Python, OpenCV, NumPy, Matplotlib, and verify basic image reading, matrix structure, and display methods.",
+  "difficulty": "Beginner",
+  "estimatedTime": "25 min",
+  "sampleImage": "/samples/lenna.png",
+
+  "coreConcept": "Digital image processing requires a Python computer vision stack (**OpenCV**, **NumPy**, **Matplotlib**). An image is stored in memory as an $M \\times N$ matrix of pixel intensity values.",
+
+  "formula": "Grayscale Matrix: I[y, x] \\in [0, 255]\nColor (BGR) Tensor: I[y, x, c] \\in [0, 255]^3\nBit Storage: B = M \\times N \\times k \\text{ bits}",
+
+  "intuition": "Think of a digital image as a giant spreadsheet where each cell represents a single pixel color, and OpenCV reads these cells row-by-row as numerical matrices.",
+
+  "procedure": [
+    "Install OpenCV, NumPy, and Matplotlib using `pip install opencv-python numpy matplotlib`.",
+    "Launch Jupyter Notebook and create a new Python 3 notebook.",
+    "Read an input image (`lenna.png`) using `cv2.imread()`.",
+    "Print the image matrix dimensions, data type, and total pixel count.",
+    "Display the original image using `cv2.imshow()` and Matplotlib.",
+    "Save processed output images to disk using `cv2.imwrite()`."
+  ],
+
+  "theory": "Digital image processing algorithms operate directly on spatial matrices representing light intensity. In Python, OpenCV handles fast C++ array operations behind a NumPy wrapper.\n\n### Why does OpenCV use BGR instead of RGB?\n\nOpenCV historically adopted the BGR channel order because early camera drivers used BGR as standard. When displaying BGR images in Matplotlib (which expects RGB), colors appear inverted unless converted via `cv2.cvtColor(img, cv2.COLOR_BGR2RGB)`.\n\n### Software Stack\n\n| Library | Role | Representation |\n| ------- | ---- | -------------- |\n| OpenCV (`cv2`) | Computer vision & I/O | BGR NumPy ndarray (`uint8`) |\n| NumPy (`np`) | Matrix array math | Multidimensional array |\n| Matplotlib (`plt`) | Scientific plotting | RGB color order |\n| Jupyter Notebook | Interactive execution | Web-based kernel |",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('lenna.png')\nprint(f\"Shape: {img.shape}, dtype: {img.dtype}\")\n\nimg_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)\nplt.imshow(img_rgb); plt.axis('off'); plt.show()\n\ncv2.imwrite('output_gray.png', cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))",
+
+  "thinkAbout": [
+    "Why does loading a color image in OpenCV produce a 3D NumPy array rather than three separate files?",
+    "What happens to image display when you pass a BGR array directly to `plt.imshow()` without color conversion?",
+    "How does 8-bit pixel quantization determine the maximum gray-level value (255)?"
+  ],
+
+  "applications": [
+    "Setting up automated vision inspection pipelines in industrial manufacturing.",
+    "Configuring embedded Linux systems (Raspberry Pi / Jetson) for robotics vision.",
+    "Preparing cloud computer vision development environments for medical diagnostic imaging.",
+    "Building scalable image preprocessing microservices."
+  ],
+
+  "resources": [
+    {
+      "type": "ppt",
+      "title": "Unit 1 — Digital Image Fundamentals",
+      "url": "https://web.stanford.edu/class/cs448f/lectures/",
+      "source": "Stanford CS448"
+    },
+    {
+      "type": "docs",
+      "title": "OpenCV Python Documentation",
+      "url": "https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html"
+    },
+    {
+      "type": "blog",
+      "title": "OpenCV BGR Color Space Explanation — PyImageSearch",
+      "url": "https://pyimagesearch.com/2018/02/26/opencv-bgr-rgb-color-spaces/"
+    }
+  ]
+}

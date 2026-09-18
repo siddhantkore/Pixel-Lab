@@ -1,6 +1,6 @@
 import React from "react";
 import { modules } from "../data/modules";
-import { getExperimentsByModule } from "../lib/markdown";   // ← changed
+import { getExperimentsByModule } from "../lib/experiments";
 import { Breadcrumbs } from "../components/common/Breadcrumbs";
 import { ExperimentCard } from "../components/lab/ExperimentCard";
 
@@ -28,11 +28,18 @@ export const Modules: React.FC = () => (
                 <p className="text-sm text-slate-600">{m.description}</p>
               </div>
             </div>
-            <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {exps.map((e) => (
-                <ExperimentCard key={e.id} experiment={e} />
-              ))}
-            </div>
+
+            {exps.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-500 italic">
+                No experiments in this module yet.
+              </p>
+            ) : (
+              <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {exps.map((e) => (
+                  <ExperimentCard key={e.id} experiment={e} />
+                ))}
+              </div>
+            )}
           </section>
         );
       })}

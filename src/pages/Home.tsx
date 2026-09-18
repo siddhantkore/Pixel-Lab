@@ -1,9 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, FlaskConical, BookOpen, Download } from "lucide-react";
+import {
+  ArrowRight,
+  Sparkles,
+  FlaskConical,
+  BookOpen,
+  Download,
+} from "lucide-react";
 import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE } from "../lib/constants";
 import { modules } from "../data/modules";
-import { experiments } from "../lib/markdown";   // ← changed
+import { experiments } from "../lib/experiments";
 import { Card } from "../components/common/Card";
 
 export const Home: React.FC = () => (
@@ -18,7 +24,9 @@ export const Home: React.FC = () => (
           {APP_NAME}
         </h1>
         <p className="mt-3 text-lg text-brand-700 font-medium">{APP_TAGLINE}</p>
-        <p className="mt-5 max-w-2xl mx-auto text-slate-600">{APP_DESCRIPTION}</p>
+        <p className="mt-5 max-w-2xl mx-auto text-slate-600">
+          {APP_DESCRIPTION}
+        </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link to="/modules" className="btn-primary">
             Start exploring <ArrowRight size={16} />
@@ -53,8 +61,8 @@ export const Home: React.FC = () => (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <h2 className="section-title">Explore modules</h2>
       <p className="text-slate-600 mt-2">
-        Each module contains curated experiments with live parameter controls, reference code,
-        and a curated reading list.
+        Each module contains curated experiments with live parameter controls,
+        reference code, and a curated reading list.
       </p>
       <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {modules.map((m) => (
@@ -70,7 +78,8 @@ export const Home: React.FC = () => (
               </h3>
               <p className="text-sm text-slate-600">{m.description}</p>
               <span className="text-xs text-slate-500 mt-auto">
-                {m.experimentIds.length} experiments
+                {m.experimentIds.length} experiment
+                {m.experimentIds.length === 1 ? "" : "s"}
               </span>
             </Card>
           </Link>

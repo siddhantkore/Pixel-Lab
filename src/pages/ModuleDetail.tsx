@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { getModule } from "../data/modules";
-import { getExperimentsByModule } from "../lib/markdown";   // ← changed
+import { getExperimentsByModule } from "../lib/experiments";
 import { ExperimentCard } from "../components/lab/ExperimentCard";
 import { Breadcrumbs } from "../components/common/Breadcrumbs";
 
@@ -9,6 +9,7 @@ export const ModuleDetail: React.FC = () => {
   const { moduleId } = useParams();
   const mod = moduleId ? getModule(moduleId) : undefined;
   if (!mod) return <Navigate to="/modules" replace />;
+
   const exps = getExperimentsByModule(mod.id);
 
   return (
@@ -33,11 +34,17 @@ export const ModuleDetail: React.FC = () => {
       </div>
 
       <h2 className="mt-10 mb-4 font-semibold text-slate-800">Experiments</h2>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {exps.map((e) => (
-          <ExperimentCard key={e.id} experiment={e} />
-        ))}
-      </div>
+      {exps.length === 0 ? (
+        <p className="text-sm text-slate-500 italic">
+          No experiments yet for this module.
+        </p>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {exps.map((e) => (
+            <ExperimentCard key={e.id} experiment={e} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

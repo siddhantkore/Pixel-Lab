@@ -1,6 +1,7 @@
 import React from "react";
 import { Sigma, Lightbulb, Settings2 } from "lucide-react";
 import { Markdown } from "../common/Markdown";
+import { inlineMath } from "../../lib/math";
 
 export const ConceptCard: React.FC<{
   formula?: string;
@@ -14,7 +15,7 @@ export const ConceptCard: React.FC<{
           <Sigma size={16} /> Formula / Key Idea
         </div>
         <pre className="text-[13px] leading-relaxed whitespace-pre-wrap font-mono text-slate-800">
-          {formula}
+          {inlineMath(formula)}
         </pre>
       </div>
     )}

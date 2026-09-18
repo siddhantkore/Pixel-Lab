@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { Home } from "./pages/Home";
 import { Modules } from "./pages/Modules";
 import { ModuleDetail } from "./pages/ModuleDetail";
@@ -10,7 +11,11 @@ import { NotFound } from "./pages/NotFound";
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Layout />,
+    element: (
+      <ErrorBoundary>
+        <Layout />
+      </ErrorBoundary>
+    ),
     children: [
       { index: true, element: <Home /> },
       { path: "modules", element: <Modules /> },
