@@ -1,28 +1,6 @@
-export type ModuleId = string;
-export type ExperimentId = string;
-
-export interface Module {
-  id: ModuleId;
-  title: string;
-  description: string;
-  icon: string;
-  color: string;
-  experimentIds: ExperimentId[];
-}
-
-export type ResourceType = "paper" | "ppt" | "blog" | "video" | "docs";
-
-export interface Resource {
-  type: ResourceType;
-  title: string;
-  url: string;
-  source?: string;
-  year?: number;
-}
-
 export interface Experiment {
-  id: ExperimentId;
-  moduleId: ModuleId;
+  id: string;
+  moduleId: string;
   title: string;
   aim: string;
   difficulty: "Beginner" | "Intermediate" | "Advanced";
@@ -32,7 +10,7 @@ export interface Experiment {
   formula: string;
   intuition: string;
   procedure: string[];
-  theory: string;         // full markdown string
+  theory: string;
   pythonCode: string;
   thinkAbout: string[];
   applications: string[];
