@@ -1,0 +1,47 @@
+{
+  "id": "e-color-proc",
+  "moduleId": "m4",
+  "title": "Color Image Processing & Color Spaces",
+  "aim": "Explore how the same image looks in RGB, HSV, YCrCb, and CIELAB colour spaces, and isolate individual channels to understand what each carries.",
+  "difficulty": "Intermediate",
+  "estimatedTime": "35 min",
+  "sampleImage": "/samples/lena.png",
+
+  "coreConcept": "Different colour spaces separate **chrominance** (colour) from **luminance** (brightness) in different ways. RGB mixes them; HSV separates hue into a circular dial; YCrCb decouples brightness for compression; CIELAB gives perceptually uniform distances.",
+
+  "formula": "Hue: H = \\theta \\text{ if } B \\le G, \\text{ else } 360 - \\theta\nSaturation: S = 1 - \\frac{3}{R + G + B} \\min(R, G, B)\nYCrCb: Y = 0.299R + 0.587G + 0.114B",
+
+  "intuition": "Imagine peeling the colour information off an image like a sticker. In HSV, the **Hue** channel holds only *which* colour (red vs blue) with no brightness. In YCrCb, the **Y** channel is a perfect grayscale version — colour has been stripped away. Different spaces suit different tasks.",
+
+  "procedure": [
+    "Load a colour image.",
+    "View it in **RGB** and observe the mix of colour + brightness in every channel.",
+    "Switch to **HSV** — Hue is which colour, Value is brightness.",
+    "Switch to **YCrCb** — Y is grayscale, Cr/Cb are red and blue chroma.",
+    "Switch to **CIELAB** — L is perceptual lightness, a/b are colour opponents.",
+    "Isolate individual channels and observe what information each carries."
+  ],
+
+  "theory": "A colour space is a coordinate system for colour. The same physical colour has different coordinates in each space, but the underlying image is unchanged.\n\n- **RGB** — hardware-native. Every channel mixes colour and brightness. Simple but not perceptually meaningful.\n- **HSV** — Hue (which colour, 0–360°), Saturation (how pure), Value (how bright). Great for colour-based segmentation because Hue is stable under illumination changes.\n- **YCrCb** — Y is luminance, Cr and Cb are chrominance differences. Used in JPEG and video codecs because chroma can be subsampled (4:2:0) without visible loss.\n- **CIELAB** — perceptually uniform. Equal numerical differences correspond to equal visual differences. Used in colour matching and printing.\n\n### Why OpenCV's Hue is 0–179\n\nOpenCV stores HSV in a `uint8` array, so Hue is scaled from 0–360° down to 0–179. Same information, just scaled to fit a byte.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('lenna.png')\nhsv   = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)\nycrcb = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)\nlab   = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)\n\nfig, axes = plt.subplots(2, 2, figsize=(8, 8))\naxes[0, 0].imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)); axes[0, 0].set_title('RGB')\naxes[0, 1].imshow(hsv);   axes[0, 1].set_title('HSV (H in 0-179)')\naxes[1, 0].imshow(ycrcb); axes[1, 0].set_title('YCrCb')\naxes[1, 1].imshow(lab);   axes[1, 1].set_title('CIELAB')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()\n\n# Isolate Hue channel\nhue_only = np.zeros_like(img)\nhue_only[:, :, 0] = hsv[:, :, 0]\ncv2.imwrite('hue_only.png', cv2.cvtColor(hue_only, cv2.COLOR_HSV2BGR))",
+
+  "thinkAbout": [
+    "Why is HSV preferred over RGB for colour-based object tracking?",
+    "What does it mean for a colour space to be *perceptually uniform*, and which one is it?",
+    "Why is chroma subsampling (4:2:0) effective in JPEG compression?"
+  ],
+
+  "applications": [
+    "Colour-based object tracking in autonomous vehicles (traffic light detection).",
+    "Medical thermal imaging pseudo-colouring for inflammation hotspots.",
+    "Video compression pipelines (YCrCb chroma subsampling in H.264).",
+    "Fruit quality sorting and agricultural grading by ripeness colour."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Changing Colorspaces", "url": "https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html" },
+    { "type": "blog", "title": "Color Spaces in OpenCV — PyImageSearch", "url": "https://pyimagesearch.com/2014/09/29/finding-dominant-colors-of-an-image-with-kmeans/" },
+    { "type": "ppt", "title": "Unit 4 — Colour Image Processing", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford CS448" }
+  ]
+}

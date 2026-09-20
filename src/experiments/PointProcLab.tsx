@@ -132,8 +132,14 @@ export const PointProcLab: React.FC<LabProps> = ({ sampleImage }) => {
     >
       <Card className="space-y-4">
         <div className="grid sm:grid-cols-2 gap-4">
-          <ImageCanvas canvasRef={originalRef} label="Original" />
-          <ImageCanvas canvasRef={workingRef} label="Transformed" />
+          <ImageCanvas
+            canvasRef={originalRef as React.RefObject<HTMLCanvasElement>}
+            label="Original"
+          />
+          <ImageCanvas
+            canvasRef={workingRef as React.RefObject<HTMLCanvasElement>}
+            label="Transformed"
+          />
         </div>
       </Card>
     </LabShell>

@@ -1087,3 +1087,437 @@ export function makeGridCanvas(
   ctx.arc(cx, cy, 4, 0, Math.PI * 2);
   ctx.fill();
 }
+
+/* =================================================================
+ * Noise generation
+ * ================================================================= */
+
+/** Box-Muller Gaussian sample */
+function gaussianSample(): number {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+/** Additive white Gaussian noise */
+export function addGaussianNoise(
+  c: HTMLCanvasElement,
+  mean = 0,
+  sigma = 25
+) {
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  for (let i = 0; i < p.length; i += 4) {
+    p[i]     = clamp(p[i]     + mean + sigma * gaussianSample());
+    p[i + 1] = clamp(p[i + 1] + mean + sigma * gaussianSample());
+    p[i + 2] = clamp(p[i + 2] + mean + sigma * gaussianSample());
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Salt & pepper noise — density in [0,1] */
+export function addSaltPepperNoise(
+  c: HTMLCanvasElement,
+  density = 0.05
+) {
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  const half = density / 2;
+  for (let i = 0; i < p.length; i += 4) {
+    const r = Math.random();
+    if (r < half) {
+      p[i] = p[i + 1] = p[i + 2] = 0;         // pepper
+    } else if (r > 1 - half) {
+      p[i] = p[i + 1] = p[i + 2] = 255;       // salt
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* =================================================================
+ * Restoration filters
+ * ================================================================= */
+
+/** Contraharmonic mean filter — order Q
+ *  Q > 0 removes pepper, Q < 0 removes salt.
+ */
+export function contraharmonicMean(
+  c: HTMLCanvasElement,
+  k: number,
+  Q: number
+) {
+  const size = Math.max(3, k | 1);
+  const half = Math.floor(size / 2);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const src = new Uint8ClampedArray(img.data);
+  const out = img.data;
+  const W = c.width;
+  const H = c.height;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let numR = 0, denR = 0;
+      let numG = 0, denG = 0;
+      let numB = 0, denB = 0;
+
+      for (let ky = -half; ky <= half; ky++) {
+        for (let kx = -half; kx <= half; kx++) {
+          const yy = Math.min(H - 1, Math.max(0, y + ky));
+          const xx = Math.min(W - 1, Math.max(0, x + kx));
+          const idx = (yy * W + xx) * 4;
+          const vr = src[idx];
+          const vg = src[idx + 1];
+          const vb = src[idx + 2];
+          numR += Math.pow(vr, Q + 1); denR += Math.pow(vr, Q);
+          numG += Math.pow(vg, Q + 1); denG += Math.pow(vg, Q);
+          numB += Math.pow(vb, Q + 1); denB += Math.pow(vb, Q);
+        }
+      }
+      const i = (y * W + x) * 4;
+      out[i]     = clamp(denR ? numR / denR : 0);
+      out[i + 1] = clamp(denG ? numG / denG : 0);
+      out[i + 2] = clamp(denB ? numB / denB : 0);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Alpha-trimmed mean filter — drop d/2 lowest & d/2 highest before averaging */
+export function alphaTrimmedMean(
+  c: HTMLCanvasElement,
+  k: number,
+  d = 4
+) {
+  const size = Math.max(3, k | 1);
+  const half = Math.floor(size / 2);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const src = new Uint8ClampedArray(img.data);
+  const out = img.data;
+  const W = c.width;
+  const H = c.height;
+  const drop = Math.max(0, Math.floor(d / 2));
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const rv: number[] = [], gv: number[] = [], bv: number[] = [];
+      for (let ky = -half; ky <= half; ky++) {
+        for (let kx = -half; kx <= half; kx++) {
+          const yy = Math.min(H - 1, Math.max(0, y + ky));
+          const xx = Math.min(W - 1, Math.max(0, x + kx));
+          const idx = (yy * W + xx) * 4;
+          rv.push(src[idx]);
+          gv.push(src[idx + 1]);
+          bv.push(src[idx + 2]);
+        }
+      }
+      rv.sort((a, b) => a - b);
+      gv.sort((a, b) => a - b);
+      bv.sort((a, b) => a - b);
+
+      const slice = (arr: number[]) =>
+        arr.slice(drop, arr.length - drop);
+      const mean = (arr: number[]) =>
+        arr.reduce((s, v) => s + v, 0) / Math.max(1, arr.length);
+
+      const i = (y * W + x) * 4;
+      out[i]     = clamp(mean(slice(rv)));
+      out[i + 1] = clamp(mean(slice(gv)));
+      out[i + 2] = clamp(mean(slice(bv)));
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* =================================================================
+ * Color space conversions
+ * ================================================================= */
+
+export type ColorSpace = "rgb" | "hsv" | "ycrcb" | "lab";
+
+/** RGB → HSV: H in [0,360), S,V in [0,1] */
+function rgb2hsv(r: number, g: number, b: number): [number, number, number] {
+  const rn = r / 255, gn = g / 255, bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === rn) h = ((gn - bn) / d) % 6;
+    else if (max === gn) h = (bn - rn) / d + 2;
+    else h = (rn - gn) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  const s = max === 0 ? 0 : d / max;
+  return [h, s, max];
+}
+
+/** RGB → YCrCb (BT.601) */
+function rgb2ycrcb(r: number, g: number, b: number): [number, number, number] {
+  const y  =  0.299 * r + 0.587 * g + 0.114 * b;
+  const cr = (r - y) * 0.713 + 128;
+  const cb = (b - y) * 0.564 + 128;
+  return [y, cr, cb];
+}
+
+/** RGB → CIELAB (D65) */
+function rgb2lab(r: number, g: number, b: number): [number, number, number] {
+  const pivotR = r / 255, pivotG = g / 255, pivotB = b / 255;
+  const srgb = (u: number) =>
+    u > 0.04045 ? Math.pow((u + 0.055) / 1.055, 2.4) : u / 12.92;
+  const R = srgb(pivotR), G = srgb(pivotG), B = srgb(pivotB);
+
+  // sRGB → XYZ (D65)
+  const X = R * 0.4124564 + G * 0.3575761 + B * 0.1804375;
+  const Y = R * 0.2126729 + G * 0.7151522 + B * 0.0721750;
+  const Z = R * 0.0193339 + G * 0.1191920 + B * 0.9503041;
+
+  // XYZ → Lab (reference white D65)
+  const Xn = 0.95047, Yn = 1.0, Zn = 1.08883;
+  const f = (t: number) =>
+    t > Math.pow(6 / 29, 3)
+      ? Math.cbrt(t)
+      : (t / (3 * Math.pow(6 / 29, 2)) + 4 / 29);
+
+  const fx = f(X / Xn), fy = f(Y / Yn), fz = f(Z / Zn);
+  const L = 116 * fy - 16;
+  const a = 500 * (fx - fy);
+  const bb = 200 * (fy - fz);
+  return [L, a, bb];
+}
+
+/** Convert canvas to a chosen color space and visualize as RGB */
+export function visualizeColorSpace(
+  c: HTMLCanvasElement,
+  space: ColorSpace,
+  channel: "all" | "0" | "1" | "2"
+) {
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+
+  const showCh = channel === "all" ? -1 : parseInt(channel, 10);
+
+  for (let i = 0; i < p.length; i += 4) {
+    const r = p[i], g = p[i + 1], b = p[i + 2];
+    let ch0 = 0, ch1 = 0, ch2 = 0;
+
+    if (space === "rgb") {
+      ch0 = r; ch1 = g; ch2 = b;
+    } else if (space === "hsv") {
+      const [h, s, v] = rgb2hsv(r, g, b);
+      ch0 = (h / 360) * 255;
+      ch1 = s * 255;
+      ch2 = v * 255;
+    } else if (space === "ycrcb") {
+      const [y, cr, cb] = rgb2ycrcb(r, g, b);
+      ch0 = y; ch1 = cr; ch2 = cb;
+    } else {
+      const [L, a, bb] = rgb2lab(r, g, b);
+      // Normalize Lab to displayable range
+      ch0 = clamp((L / 100) * 255);
+      ch1 = clamp(((a + 128) / 256) * 255);
+      ch2 = clamp(((bb + 128) / 256) * 255);
+    }
+
+    if (showCh === -1) {
+      p[i] = ch0; p[i + 1] = ch1; p[i + 2] = ch2;
+    } else {
+      const v = [ch0, ch1, ch2][showCh];
+      p[i] = p[i + 1] = p[i + 2] = v;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* =================================================================
+ * Thresholding & segmentation
+ * ================================================================= */
+
+export type ThresholdMethod = "global" | "otsu" | "adaptive";
+
+/** Global threshold */
+export function globalThreshold(c: HTMLCanvasElement, t: number) {
+  toGrayscale(c);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  for (let i = 0; i < p.length; i += 4) {
+    const v = p[i] > t ? 255 : 0;
+    p[i] = p[i + 1] = p[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * Otsu's automatic threshold.
+ * Returns the computed threshold value (for display).
+ */
+export function otsuThreshold(c: HTMLCanvasElement): number {
+  toGrayscale(c);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+
+  const hist = new Uint32Array(256);
+  let total = 0;
+  for (let i = 0; i < p.length; i += 4) {
+    hist[p[i]]++; total++;
+  }
+
+  let sumAll = 0;
+  for (let i = 0; i < 256; i++) sumAll += i * hist[i];
+
+  let sumB = 0, wB = 0, maxVar = 0, threshold = 0;
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sumAll - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > maxVar) {
+      maxVar = between;
+      threshold = t;
+    }
+  }
+
+  for (let i = 0; i < p.length; i += 4) {
+    const v = p[i] > threshold ? 255 : 0;
+    p[i] = p[i + 1] = p[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+  return threshold;
+}
+
+/** Adaptive threshold (mean of local window − C) */
+export function adaptiveThreshold(
+  c: HTMLCanvasElement,
+  blockSize: number,
+  C: number
+) {
+  toGrayscale(c);
+  const size = Math.max(3, blockSize | 1);
+  const half = Math.floor(size / 2);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const src = new Uint8ClampedArray(img.data);
+  const out = img.data;
+  const W = c.width;
+  const H = c.height;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let sum = 0, count = 0;
+      for (let ky = -half; ky <= half; ky++) {
+        for (let kx = -half; kx <= half; kx++) {
+          const yy = Math.min(H - 1, Math.max(0, y + ky));
+          const xx = Math.min(W - 1, Math.max(0, x + kx));
+          sum += src[(yy * W + xx) * 4];
+          count++;
+        }
+      }
+      const mean = sum / count;
+      const thr = mean - C;
+      const v = src[(y * W + x) * 4] > thr ? 255 : 0;
+      const i = (y * W + x) * 4;
+      out[i] = out[i + 1] = out[i + 2] = v;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * Draw bounding boxes around connected components of foreground (255)
+ * pixels in a binarized canvas. Uses a simple BFS flood fill.
+ * Returns the number of components drawn.
+ */
+export function drawBoundingBoxes(
+  c: HTMLCanvasElement,
+  minArea = 100
+): number {
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  const W = c.width;
+  const H = c.height;
+
+  const visited = new Uint8Array(W * H);
+  const isFg = (x: number, y: number) => p[(y * W + x) * 4] > 128;
+
+  let boxes = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const idx = y * W + x;
+      if (visited[idx] || !isFg(x, y)) continue;
+
+      // BFS flood fill this component
+      const queue: number[] = [idx];
+      visited[idx] = 1;
+      let minX = x, maxX = x, minY = y, maxY = y, area = 0;
+
+      while (queue.length) {
+        const q = queue.pop()!;
+        const qy = Math.floor(q / W);
+        const qx = q % W;
+        area++;
+        if (qx < minX) minX = qx;
+        if (qx > maxX) maxX = qx;
+        if (qy < minY) minY = qy;
+        if (qy > maxY) maxY = qy;
+
+        // 4-neighbors
+        const neighbors = [
+          [qx + 1, qy],
+          [qx - 1, qy],
+          [qx, qy + 1],
+          [qx, qy - 1],
+        ];
+        for (const [nx, ny] of neighbors) {
+          if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+          const nIdx = ny * W + nx;
+          if (!visited[nIdx] && isFg(nx, ny)) {
+            visited[nIdx] = 1;
+            queue.push(nIdx);
+          }
+        }
+      }
+
+      if (area >= minArea) {
+        // Draw a green rectangle using raw pixel writes (post-putImageData)
+        drawRectOutline(p, W, H, minX, minY, maxX, maxY, [16, 185, 129]);
+        boxes++;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return boxes;
+}
+
+function drawRectOutline(
+  p: Uint8ClampedArray,
+  W: number,
+  H: number,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  rgb: [number, number, number]
+) {
+  const set = (x: number, y: number) => {
+    if (x < 0 || x >= W || y < 0 || y >= H) return;
+    const i = (y * W + x) * 4;
+    p[i] = rgb[0]; p[i + 1] = rgb[1]; p[i + 2] = rgb[2]; p[i + 3] = 255;
+  };
+  for (let x = x0; x <= x1; x++) { set(x, y0); set(x, y1); }
+  for (let y = y0; y <= y1; y++) { set(x0, y); set(x1, y); }
+  // corner dots for clarity
+  set(x0, y0); set(x1, y0); set(x0, y1); set(x1, y1);
+}

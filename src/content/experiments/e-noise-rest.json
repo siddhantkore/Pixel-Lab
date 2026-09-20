@@ -1,0 +1,48 @@
+{
+  "id": "e-noise-rest",
+  "moduleId": "m4",
+  "title": "Noise Models & Image Restoration",
+  "aim": "Synthesize Gaussian and Salt-and-Pepper noise, then restore the image using order-statistic filters — mean, median, alpha-trimmed mean, and contraharmonic mean.",
+  "difficulty": "Advanced",
+  "estimatedTime": "40 min",
+  "sampleImage": "/samples/cameraman.png",
+
+  "coreConcept": "Image degradation is modeled as $g = h * f + \\eta$: a clean image $f$ convolved with a blur kernel $h$ plus noise $\\eta$. Restoration inverts part of this. Different noise types demand different filters — **median** beats **mean** for impulse noise; **contraharmonic** targets specific tail behaviour.",
+
+  "formula": "Degradation: g(x, y) = h(x, y) * f(x, y) + \\eta(x, y)\nArithmetic mean: \\hat{f}(x, y) = \\frac{1}{mn} \\sum_{(s,t) \\in S_{xy}} g(s, t)\nContraharmonic: \\hat{f}(x, y) = \\frac{\\sum g(s, t)^{Q+1}}{\\sum g(s, t)^Q}",
+
+  "intuition": "Think of noise as specks scattered on a photograph. **Gaussian** noise is a fine haze of small deviations — smooth it away. **Salt-and-pepper** noise is bright-white and dark-black pixels where sensor data is missing — you can't average them away, but you can *ignore* them by taking the median of the neighborhood.",
+
+  "procedure": [
+    "Load a clean grayscale image.",
+    "Add **Gaussian noise** (sigma ≈ 25) and observe the haze.",
+    "Add **Salt-and-Pepper noise** (density ≈ 5%) and observe the specks.",
+    "Apply **Arithmetic mean** — smooths Gaussian well, smears salt-and-pepper.",
+    "Apply **Median filter** — removes salt-and-pepper, leaves Gaussian almost alone.",
+    "Try **Contraharmonic mean** with Q = +1.5 for pepper and Q = −1.5 for salt.",
+    "Try **Alpha-trimmed mean** with d = 4 for mixed noise."
+  ],
+
+  "theory": "Noise arises from sensor limitations, transmission errors, or quantization. Common models:\n\n- **Gaussian noise** — additive, samples drawn from N(μ, σ²). From thermal sensor noise.\n- **Salt-and-pepper (impulse) noise** — individual pixels replaced by 0 or 255. From dead sensor elements.\n- **Rayleigh, Erlang, Gamma, Exponential** — models for radar, laser, ultrasound.\n\nRestoration filters work on the *noise model*:\n\n- **Arithmetic mean** — averages the window. Good for Gaussian, terrible for salt-and-pepper (impulses pollute the average).\n- **Median** — takes the middle sorted value. Rejects impulses because they sit at the sorted extremes.\n- **Contraharmonic mean** — order $Q$ controls whether high or low values dominate the weighted average. $Q > 0$ suppresses dark outliers; $Q < 0$ suppresses bright ones.\n- **Alpha-trimmed mean** — drops the $d/2$ lowest and $d/2$ highest values, then averages. Balances both.\n\n### Trade-off\n\nAll smoothing filters blur edges. The more noise they remove, the more detail they lose. Median filters preserve edges better than linear filters.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('cameraman.png', cv2.IMREAD_GRAYSCALE).astype(np.float32)\n\n# Gaussian noise\ngaussian_noise = np.random.normal(0, 25, img.shape)\nnoisy_gauss = np.clip(img + gaussian_noise, 0, 255).astype(np.uint8)\n\n# Salt & pepper\nnoisy_sp = img.copy()\nprob = 0.05\nrnd = np.random.rand(*img.shape)\nnoisy_sp[rnd < prob / 2] = 0\nnoisy_sp[rnd > 1 - prob / 2] = 255\nnoisy_sp = noisy_sp.astype(np.uint8)\n\n# Contraharmonic mean\ndef contraharmonic(img, size, Q):\n    num = np.power(img.astype(np.float32), Q + 1)\n    den = np.power(img.astype(np.float32), Q)\n    kernel = np.ones((size, size), np.float32)\n    n = cv2.filter2D(num, -1, kernel)\n    d = cv2.filter2D(den, -1, kernel)\n    return np.clip(n / (d + 1e-6), 0, 255).astype(np.uint8)\n\nrestored_sp = contraharmonic(noisy_sp, 3, Q=1.5)\nrestored_median = cv2.medianBlur(noisy_sp, 5)\n\nfig, axes = plt.subplots(2, 3, figsize=(12, 8))\naxes[0, 0].imshow(img, cmap='gray');           axes[0, 0].set_title('Original')\naxes[0, 1].imshow(noisy_gauss, cmap='gray');  axes[0, 1].set_title('Gaussian noise')\naxes[0, 2].imshow(noisy_sp, cmap='gray');     axes[0, 2].set_title('Salt & pepper')\naxes[1, 0].imshow(cv2.blur(noisy_gauss, (5, 5)), cmap='gray'); axes[1, 0].set_title('Mean (Gaussian)')\naxes[1, 1].imshow(restored_median, cmap='gray'); axes[1, 1].set_title('Median (S&P)')\naxes[1, 2].imshow(restored_sp, cmap='gray');   axes[1, 2].set_title('Contraharmonic Q=1.5')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why does a Median filter outperform Arithmetic mean for salt-and-pepper noise?",
+    "What happens when you flip the sign of the Contraharmonic order Q on salt noise?",
+    "How does the Alpha-Trimmed Mean parameter d balance between aggressive and mild smoothing?"
+  ],
+
+  "applications": [
+    "Restoring degraded historical archive photographs.",
+    "Removing sensor noise from satellite deep-space telemetry.",
+    "Denoising industrial X-ray inspection imagery.",
+    "Improving low-dose medical CT and PET scan clarity."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Image Filtering", "url": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html" },
+    { "type": "paper", "title": "Median Filtering (Huang, 1979)", "url": "https://ieeexplore.ieee.org/document/1163114" },
+    { "type": "paper", "title": "Digital Image Processing (Gonzalez & Woods) — Chapter 5", "url": "https://www.imageprocessingplace.com/" }
+  ]
+}
