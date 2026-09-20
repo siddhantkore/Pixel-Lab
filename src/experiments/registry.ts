@@ -7,6 +7,9 @@ import { SamplingLab } from "./SamplingLab";
 import { PointProcLab } from "./PointProcLab";
 import { HistLab } from "./HistLab";
 import { SpatFiltLab } from "./SpatFiltLab";
+import { PixRelLab } from "./PixRelLab";
+import { SharpEdgeLab } from "./SharpEdgeLab";
+import { MorphLab } from "./MorphLab";
 
 export interface LabProps {
   sampleImage: string;
@@ -21,11 +24,9 @@ export const labRegistry: Record<string, ComponentType<LabProps>> = {
   "e-point-proc":  PointProcLab,
   "e-hist":        HistLab,
   "e-spat-filt":   SpatFiltLab,
-
-  // Module 3 — uncomment as you add each:
-  // "e-pix-rel":    PixRelLab,
-  // "e-sharp-edge": SharpEdgeLab,
-  // "e-morph":      MorphLab,
+  "e-pix-rel":     PixRelLab,
+  "e-sharp-edge":  SharpEdgeLab,
+  "e-morph":       MorphLab,
 
   // Module 4 — uncomment as you add each:
   // "e-noise-rest": NoiseRestLab,

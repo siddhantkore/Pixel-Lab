@@ -1,0 +1,47 @@
+{
+  "id": "e-morph",
+  "moduleId": "m3",
+  "title": "Morphological Image Processing",
+  "aim": "Apply binary morphology — Erosion, Dilation, Opening, Closing, and Gradient — and observe how each probes shape with a structuring element.",
+  "difficulty": "Intermediate",
+  "estimatedTime": "35 min",
+  "sampleImage": "/samples/coins.png",
+
+  "coreConcept": "Morphological operations probe an image with a small **structuring element** (SE) of chosen size and shape. **Erosion** shrinks objects; **Dilation** grows them; **Opening** and **Closing** combine the two to remove noise or fill holes without net growth.",
+
+  "formula": "Erosion: A \\ominus B = \\{ z \\mid B_z \\subseteq A \\}\nDilation: A \\oplus B = \\{ z \\mid \\hat{B}_z \\cap A \\neq \\emptyset \\}\nOpening: A \\circ B = (A \\ominus B) \\oplus B\nClosing: A \\bullet B = (A \\oplus B) \\ominus B",
+
+  "intuition": "Erosion is like rolling a small disk inside every object — the disk can only fit where the shape is thick. Dilation is like brushing every object outward with a paintbrush of the SE's size. Opening cleans external specks; closing fills internal holes.",
+
+  "procedure": [
+    "Load a binary image (coins or fingerprint work well).",
+    "Apply **Erosion** with kernel size 3 — small bright regions disappear.",
+    "Apply **Dilation** — small dark holes fill in.",
+    "Apply **Opening** (erode → dilate) — external noise removed, shapes preserved.",
+    "Apply **Closing** (dilate → erode) — internal holes filled, shapes preserved.",
+    "Apply **Morphological Gradient** to extract object outlines."
+  ],
+
+  "theory": "Morphology is set theory applied to binary images. A **structuring element (SE)** is a small binary mask you slide across the image.\n\n- **Erosion** — output pixel is white only if the entire SE fits inside the foreground. Shrinks objects, breaks thin bridges.\n- **Dilation** — output pixel is white if any SE element overlaps a foreground pixel. Expands objects, fills small gaps.\n\nThese are duals. Composite operations:\n\n- **Opening** = erode → dilate. Removes small *external* bright noise (like salt specks). Main object shape is preserved.\n- **Closing** = dilate → erode. Fills small *internal* dark holes (like pepper specks). Main object shape is preserved.\n- **Gradient** = dilation − erosion. Extracts the object boundary.\n\n### Why SE shape matters\n\nA circular SE produces round dilations, useful for smoothing. A cross SE preserves rectangular structures. The choice depends on the shape of objects you care about.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('coins.png', cv2.IMREAD_GRAYSCALE)\n_, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)\n\nkernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))\n\neroded   = cv2.erode(binary, kernel, iterations=1)\ndilated  = cv2.dilate(binary, kernel, iterations=1)\nopened   = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)\nclosed   = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)\ngradient = cv2.morphologyEx(binary, cv2.MORPH_GRADIENT, kernel)\n\nfig, axes = plt.subplots(2, 3, figsize=(12, 8))\naxes[0, 0].imshow(binary, cmap='gray');    axes[0, 0].set_title('Binary input')\naxes[0, 1].imshow(eroded, cmap='gray');    axes[0, 1].set_title('Erosion')\naxes[0, 2].imshow(dilated, cmap='gray');   axes[0, 2].set_title('Dilation')\naxes[1, 0].imshow(opened, cmap='gray');    axes[1, 0].set_title('Opening')\naxes[1, 1].imshow(closed, cmap='gray');    axes[1, 1].set_title('Closing')\naxes[1, 2].imshow(gradient, cmap='gray');  axes[1, 2].set_title('Gradient')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why is Opening idempotent — applying it twice gives the same result?",
+    "How does the shape of the structuring element (rect / ellipse / cross) change the output?",
+    "What is the morphological gradient, and why does it equal dilation − erosion?"
+  ],
+
+  "applications": [
+    "Enhancing fingerprint ridge patterns in biometric identification.",
+    "Removing background noise specks in OCR pipelines.",
+    "Separating touching cells in automated medical counting.",
+    "Extracting printed circuit-board trace outlines."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Morphological Operations", "url": "https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html" },
+    { "type": "paper", "title": "Image Analysis & Mathematical Morphology (Serra, 1982)", "url": "https://www.sciencedirect.com/book/9780126372427/image-analysis-and-mathematical-morphology" },
+    { "type": "ppt", "title": "Unit 2 — Morphological Processing", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford CS448" }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "e-sharp-edge",
+  "moduleId": "m3",
+  "title": "Image Sharpening & Edge Detection",
+  "aim": "Compare spatial derivative filters — Sobel, Laplacian, Unsharp Mask, and High-Boost — and observe how each emphasizes different edge frequencies.",
+  "difficulty": "Intermediate",
+  "estimatedTime": "35 min",
+  "sampleImage": "/samples/cameraman.png",
+
+  "coreConcept": "Edges are **high-frequency intensity transitions**. First-derivative filters (Sobel) respond with a peak; second-derivative filters (Laplacian) respond with a zero-crossing; unsharp masking adds the high-pass back to the original to *sharpen*.",
+
+  "formula": "Gradient: |\\nabla f| \\approx \\sqrt{G_x^2 + G_y^2}\nLaplacian: \\nabla^2 f = \\frac{\\partial^2 f}{\\partial x^2} + \\frac{\\partial^2 f}{\\partial y^2}\nUnsharp: f_{sharp} = f + \\alpha \\cdot (f - f_{blur})\nHigh-Boost: f_{hb} = A \\cdot f - f_{blur}",
+
+  "intuition": "Think of an edge as a small cliff in the intensity landscape. Derivative filters measure the **slope**. Sobel finds the direction and steepness; Laplacian finds where the slope changes sign. Sharpening is subtracting a smooth copy — the residual is all the edges.",
+
+  "procedure": [
+    "Load a low-detail grayscale image.",
+    "Apply **Sobel** and observe the gradient magnitude — bright where edges are.",
+    "Apply **Laplacian** and observe thin double-edge responses.",
+    "Apply **Unsharp Mask** with amount 1.0 — the image becomes crisper.",
+    "Try **High-Boost** with A = 1.5 — brighter overall but still sharpened.",
+    "Increase the sharpening amount and observe halo artifacts."
+  ],
+
+  "theory": "Edge detection identifies points of **rapid intensity change**. Mathematical tools:\n\n- **First derivative (gradient)** — Sobel approximates ∂f/∂x and ∂f/∂y with 3×3 kernels. The magnitude √(Gx²+Gy²) is largest at edge centers.\n- **Second derivative (Laplacian)** — a single 3×3 kernel with a positive center and negative ring. It responds with a positive lobe on one side of the edge and negative on the other. The zero-crossing is the edge.\n\nSharpening uses **high-pass filtering**:\n\n- **Unsharp mask** — subtract a blurred copy from the original, add back scaled.\n- **High-boost** — a generalization: `A·f − blur`. When A = 1, this equals unsharp mask with amount 1. When A > 1, the original is amplified too.\n\n### Trade-off\n\nSharpening amplifies *everything* high-frequency, including noise. Over-sharpening creates bright halos around edges.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('cameraman.png', cv2.IMREAD_GRAYSCALE)\n\n# Sobel\nsobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)\nsobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)\nsobel_mag = cv2.magnitude(sobelx, sobely)\nsobel_mag = np.clip(sobel_mag, 0, 255).astype(np.uint8)\n\n# Laplacian\nlaplacian = cv2.Laplacian(img, cv2.CV_64F)\nlaplacian_abs = np.uint8(np.absolute(laplacian))\n\n# Unsharp\nblurred = cv2.GaussianBlur(img, (5, 5), 1.5)\nmask = cv2.subtract(img, blurred)\nunsharp = cv2.add(img, mask)\n\n# High-boost\nA = 1.5\nhigh_boost = cv2.addWeighted(img, A, blurred, -(A - 1), 0)\n\nfig, axes = plt.subplots(2, 2, figsize=(8, 8))\naxes[0, 0].imshow(sobel_mag, cmap='gray'); axes[0, 0].set_title('Sobel magnitude')\naxes[0, 1].imshow(laplacian_abs, cmap='gray'); axes[0, 1].set_title('Laplacian')\naxes[1, 0].imshow(unsharp, cmap='gray'); axes[1, 0].set_title('Unsharp mask')\naxes[1, 1].imshow(high_boost, cmap='gray'); axes[1, 1].set_title('High-boost A=1.5')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why does the Laplacian respond with two lobes on either side of a step edge?",
+    "How do Sobel kernels combine smoothing (from a Gaussian) with differentiation?",
+    "Why does over-sharpening produce halos and how does high-boost reduce them?"
+  ],
+
+  "applications": [
+    "Enhancing fine bone-edge detail in X-rays.",
+    "Automated defect and crack inspection in industrial quality control.",
+    "Focus measurement and autofocus algorithms in digital cameras.",
+    "Pre-processing step for object detection and boundary tracing."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Sobel Derivatives", "url": "https://docs.opencv.org/4.x/d2/d2c/tutorial_py_sobel.html" },
+    { "type": "docs", "title": "OpenCV — Laplace Operator", "url": "https://docs.opencv.org/4.x/d5/db5/tutorial_laplace_operator.html" },
+    { "type": "blog", "title": "Unsharp Masking and High-Boost Filtering — PyImageSearch", "url": "https://pyimagesearch.com/2016/07/25/convolutions-with-opencv-and-python/" }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "e-pix-rel",
+  "moduleId": "m3",
+  "title": "Pixel Relationships & Distance Metrics",
+  "aim": "Compare Euclidean, City-Block (D4), and Chessboard (D8) distance metrics, and visualize how each shapes the region equidistant from a source point.",
+  "difficulty": "Intermediate",
+  "estimatedTime": "30 min",
+  "sampleImage": "/samples/lena.png",
+
+  "coreConcept": "Two pixels are **neighbors** based on how far apart they are. Distance metrics define *which pixels* are 'close': D4 counts grid steps, D8 counts king moves, Euclidean measures straight-line. Each metric produces a characteristic equidistant contour — diamond, square, or circle.",
+
+  "formula": "Euclidean: D_e(p, q) = \\sqrt{(x - s)^2 + (y - t)^2}\nCity block (D4): D_4(p, q) = |x - s| + |y - t|\nChessboard (D8): D_8(p, q) = \\max(|x - s|, |y - t|)",
+
+  "intuition": "Imagine two people walking from the same street corner. One walks freely in a straight line (Euclidean), one follows only NS/EW streets (D4), one can also move diagonally (D8). After 5 minutes, each reaches a different set of points — a circle, a diamond, or a square.",
+
+  "procedure": [
+    "Start with the synthetic grid (a black dot at the center).",
+    "Choose **Euclidean** — observe the circular distance field.",
+    "Choose **City-Block (D4)** — observe the diamond.",
+    "Choose **Chessboard (D8)** — observe the square.",
+    "Compare all three side by side.",
+    "Apply the same metric to a real image to see it as an image-processing tool."
+  ],
+
+  "theory": "A pixel has **neighbors** based on how far apart they are. There are four standard definitions:\n\n- **4-neighbors (N4)** — up, down, left, right. Distance metric: `|dx| + |dy|` (City-Block / Manhattan).\n- **8-neighbors (N8)** — includes diagonals. Distance metric: `max(|dx|, |dy|)` (Chessboard).\n- **Diagonal (ND)** — only the four diagonal cells.\n- **Mixed (m-connectivity)** — 8-connectivity with a rule that eliminates ambiguous paths.\n\nA **distance transform** replaces each pixel by its distance to the nearest foreground pixel. Bright regions = far from objects. This is used in:\n\n- Watershed segmentation (marker generation)\n- Robot path planning (cost maps)\n- Skeletonization (medial axis)\n\n### Why does the choice of metric matter?\n\nA D4 distance field is bounded by a diamond, D8 by a square, and Euclidean by a circle. When used for morphology, D4 produces square dilations and Euclidean produces round ones.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\n# Binary image with a single dot at the center\nimg = np.ones((100, 100), dtype=np.uint8) * 255\nimg[50, 50] = 0\n\ndist_euc  = cv2.distanceTransform(img, cv2.DIST_L2, 5)   # Euclidean\ndist_city = cv2.distanceTransform(img, cv2.DIST_L1, 3)   # City-block\ndist_chess= cv2.distanceTransform(img, cv2.DIST_C,  3)   # Chessboard\n\nfig, axes = plt.subplots(1, 3, figsize=(12, 4))\naxes[0].imshow(dist_euc,   cmap='jet'); axes[0].set_title('Euclidean')\naxes[1].imshow(dist_city,  cmap='jet'); axes[1].set_title('City-Block (D4)')\naxes[2].imshow(dist_chess, cmap='jet'); axes[2].set_title('Chessboard (D8)')\nfor ax in axes: ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why does 8-connectivity sometimes create false diagonal shortcuts in boundary tracing?",
+    "What geometric shape is formed by all pixels at City-Block distance ≤ 3 from the origin?",
+    "How is `cv2.distanceTransform` used to seed the Watershed segmentation algorithm?"
+  ],
+
+  "applications": [
+    "Watershed image segmentation — automatic marker generation.",
+    "Robot path planning and collision-free obstacle avoidance.",
+    "Skeletonization and medial axis transform.",
+    "Defect region isolation in industrial inspection."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Distance Transform", "url": "https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html#gaa9e58d2860d4afa658ef70a9b1115576" },
+    { "type": "paper", "title": "Distance Transforms of Sampled Functions (Felzenszwalb & Huttenlocher, 2012)", "url": "https://cs.brown.edu/people/pfelzens/papers/dt-final.pdf" },
+    { "type": "ppt", "title": "Unit 1 — Pixel Relationships", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford CS448" }
+  ]
+}

@@ -655,3 +655,435 @@ export function drawHistogram(
     ctx.fillRect(i * bw, h - barH, Math.max(1, bw), barH);
   }
 }
+
+
+
+/* =================================================================
+ * Edge detection — Sobel & Laplacian
+ * ================================================================= */
+
+/** Sobel gradient magnitude, optional threshold. Returns void, mutates canvas. */
+export function sobelEdges(
+  c: HTMLCanvasElement,
+  threshold = 0,
+  ksize = 3
+) {
+  toGrayscale(c);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  const W = c.width;
+  const H = c.height;
+
+  // Sobel kernels
+  const kx = [
+    [-1, 0, 1],
+    [-2, 0, 2],
+    [-1, 0, 1],
+  ];
+  const ky = [
+    [-1, -2, -1],
+    [0, 0, 0],
+    [1, 2, 1],
+  ];
+  const half = 1;
+
+  const out = new Uint8ClampedArray(p.length);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let gx = 0, gy = 0;
+      for (let j = 0; j < 3; j++) {
+        for (let i = 0; i < 3; i++) {
+          const yy = Math.min(H - 1, Math.max(0, y + j - half));
+          const xx = Math.min(W - 1, Math.max(0, x + i - half));
+          const v = p[(yy * W + xx) * 4];
+          gx += v * kx[j][i];
+          gy += v * ky[j][i];
+        }
+      }
+      const mag = Math.sqrt(gx * gx + gy * gy);
+      const v = mag >= threshold ? 255 : 0;
+      const i = (y * W + x) * 4;
+      out[i] = out[i + 1] = out[i + 2] = v;
+      out[i + 3] = 255;
+    }
+  }
+  for (let i = 0; i < p.length; i++) p[i] = out[i];
+  ctx.putImageData(img, 0, 0);
+  // ksize is accepted for API parity with OpenCV; this demo uses 3×3.
+  void ksize;
+}
+
+/** Laplacian magnitude (approximate), zero-crossings become edges */
+export function laplacianEdges(c: HTMLCanvasElement) {
+  toGrayscale(c);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  const W = c.width;
+  const H = c.height;
+
+  const k = [
+    [0, -1, 0],
+    [-1, 4, -1],
+    [0, -1, 0],
+  ];
+  const half = 1;
+  const out = new Uint8ClampedArray(p.length);
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let acc = 0;
+      for (let j = 0; j < 3; j++) {
+        for (let i = 0; i < 3; i++) {
+          const yy = Math.min(H - 1, Math.max(0, y + j - half));
+          const xx = Math.min(W - 1, Math.max(0, x + i - half));
+          const v = p[(yy * W + xx) * 4];
+          acc += v * k[j][i];
+        }
+      }
+      const v = Math.abs(acc);
+      const i = (y * W + x) * 4;
+      out[i] = out[i + 1] = out[i + 2] = v;
+      out[i + 3] = 255;
+    }
+  }
+  for (let i = 0; i < p.length; i++) p[i] = out[i];
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Unsharp mask: sharp = f + amount · (f − blur) */
+export function unsharpMask(
+  c: HTMLCanvasElement,
+  amount = 1,
+  radius = 3,
+  sigma = 1.5
+) {
+  const src = cloneCanvas(c);
+  const blurred = cloneCanvas(c);
+  gaussianBlur(blurred, radius, sigma);
+
+  const ctx = c.getContext("2d")!;
+  const srcData = src.getContext("2d")!.getImageData(0, 0, src.width, src.height);
+  const blurData = blurred
+    .getContext("2d")!
+    .getImageData(0, 0, blurred.width, blurred.height);
+  const p = srcData.data;
+  const b = blurData.data;
+
+  for (let i = 0; i < p.length; i += 4) {
+    p[i] = clamp(p[i] + amount * (p[i] - b[i]));
+    p[i + 1] = clamp(p[i + 1] + amount * (p[i + 1] - b[i + 1]));
+    p[i + 2] = clamp(p[i + 2] + amount * (p[i + 2] - b[i + 2]));
+  }
+  ctx.putImageData(srcData, 0, 0);
+}
+
+/** High-boost filter: hb = A·f − blur  (A ≥ 1) */
+export function highBoost(
+  c: HTMLCanvasElement,
+  A = 1.5,
+  radius = 3,
+  sigma = 1.5
+) {
+  const src = cloneCanvas(c);
+  const blurred = cloneCanvas(c);
+  gaussianBlur(blurred, radius, sigma);
+
+  const ctx = c.getContext("2d")!;
+  const srcData = src.getContext("2d")!.getImageData(0, 0, src.width, src.height);
+  const blurData = blurred
+    .getContext("2d")!
+    .getImageData(0, 0, blurred.width, blurred.height);
+  const p = srcData.data;
+  const b = blurData.data;
+
+  for (let i = 0; i < p.length; i += 4) {
+    p[i] = clamp(A * p[i] - b[i]);
+    p[i + 1] = clamp(A * p[i + 1] - b[i + 1]);
+    p[i + 2] = clamp(A * p[i + 2] - b[i + 2]);
+  }
+  ctx.putImageData(srcData, 0, 0);
+}
+
+/* =================================================================
+ * Morphology
+ * ================================================================= */
+
+export type MorphKernel = "rect" | "ellipse" | "cross";
+
+/** Build a 0/1 structuring element of size k×k */
+function structuringElement(
+  k: number,
+  shape: MorphKernel
+): Uint8Array[] {
+  const r = Math.floor(k / 2);
+  const out: Uint8Array[] = [];
+  for (let y = 0; y < k; y++) {
+    out.push(new Uint8Array(k));
+    for (let x = 0; x < k; x++) {
+      const dx = x - r;
+      const dy = y - r;
+      let on = true;
+      if (shape === "ellipse") on = dx * dx + dy * dy <= r * r + 1;
+      else if (shape === "cross") on = dx === 0 || dy === 0;
+      else on = true;
+      out[y][x] = on ? 1 : 0;
+    }
+  }
+  return out;
+}
+
+/** Threshold to binary (0/255) — used before morphology */
+export function toBinary(c: HTMLCanvasElement, t = 127) {
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  for (let i = 0; i < p.length; i += 4) {
+    const y = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+    const v = y > t ? 255 : 0;
+    p[i] = p[i + 1] = p[i + 2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Erosion: for each pixel, keep 255 only if all SE pixels are 255 */
+export function erode(
+  c: HTMLCanvasElement,
+  k: number,
+  shape: MorphKernel = "rect"
+) {
+  const se = structuringElement(k, shape);
+  const half = Math.floor(k / 2);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const src = new Uint8ClampedArray(img.data);
+  const out = img.data;
+  const W = c.width;
+  const H = c.height;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let v = 255;
+      for (let j = 0; j < k && v === 255; j++) {
+        for (let i = 0; i < k; i++) {
+          if (!se[j][i]) continue;
+          const yy = Math.min(H - 1, Math.max(0, y + j - half));
+          const xx = Math.min(W - 1, Math.max(0, x + i - half));
+          if (src[(yy * W + xx) * 4] < 128) {
+            v = 0;
+            break;
+          }
+        }
+      }
+      const idx = (y * W + x) * 4;
+      out[idx] = out[idx + 1] = out[idx + 2] = v;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Dilation: 255 if any SE pixel is 255 */
+export function dilate(
+  c: HTMLCanvasElement,
+  k: number,
+  shape: MorphKernel = "rect"
+) {
+  const se = structuringElement(k, shape);
+  const half = Math.floor(k / 2);
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const src = new Uint8ClampedArray(img.data);
+  const out = img.data;
+  const W = c.width;
+  const H = c.height;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let v = 0;
+      for (let j = 0; j < k && v === 0; j++) {
+        for (let i = 0; i < k; i++) {
+          if (!se[j][i]) continue;
+          const yy = Math.min(H - 1, Math.max(0, y + j - half));
+          const xx = Math.min(W - 1, Math.max(0, x + i - half));
+          if (src[(yy * W + xx) * 4] >= 128) {
+            v = 255;
+            break;
+          }
+        }
+      }
+      const idx = (y * W + x) * 4;
+      out[idx] = out[idx + 1] = out[idx + 2] = v;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/** Opening = erode → dilate (removes small bright specks outside objects) */
+export function morphOpen(
+  c: HTMLCanvasElement,
+  k: number,
+  shape: MorphKernel = "rect"
+) {
+  erode(c, k, shape);
+  dilate(c, k, shape);
+}
+
+/** Closing = dilate → erode (fills small dark holes inside objects) */
+export function morphClose(
+  c: HTMLCanvasElement,
+  k: number,
+  shape: MorphKernel = "rect"
+) {
+  dilate(c, k, shape);
+  erode(c, k, shape);
+}
+
+/** Morphological gradient = dilate − erode  (extracts object boundaries) */
+export function morphGradient(
+  c: HTMLCanvasElement,
+  k: number,
+  shape: MorphKernel = "rect"
+) {
+  const d = cloneCanvas(c);
+  const e = cloneCanvas(c);
+  dilate(d, k, shape);
+  erode(e, k, shape);
+
+  const ctx = c.getContext("2d")!;
+  const dData = d.getContext("2d")!.getImageData(0, 0, c.width, c.height);
+  const eData = e.getContext("2d")!.getImageData(0, 0, c.width, c.height);
+  const out = ctx.getImageData(0, 0, c.width, c.height);
+  const dp = dData.data;
+  const ep = eData.data;
+  const op = out.data;
+
+  for (let i = 0; i < op.length; i += 4) {
+    const v = Math.max(0, dp[i] - ep[i]);
+    op[i] = op[i + 1] = op[i + 2] = v;
+  }
+  ctx.putImageData(out, 0, 0);
+}
+
+/* =================================================================
+ * Distance transform — for e-pix-rel
+ * ================================================================= */
+
+export type DistanceMetric = "euclidean" | "manhattan" | "chessboard";
+
+/**
+ * Distance transform on a binary image.
+ * Returns a canvas where brighter = farther from nearest foreground (0) pixel.
+ * Only foreground pixels (== 0) act as sources; everything else is measured.
+ */
+export function distanceTransform(
+  c: HTMLCanvasElement,
+  metric: DistanceMetric
+): void {
+  const ctx = c.getContext("2d")!;
+  const img = ctx.getImageData(0, 0, c.width, c.height);
+  const p = img.data;
+  const W = c.width;
+  const H = c.height;
+  const INF = 1e9;
+
+  // Distance buffer initialized: 0 at foreground, INF elsewhere
+  const dist = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      const isFg = p[i] < 128;
+      dist[y * W + x] = isFg ? 0 : INF;
+    }
+  }
+
+  // Two-pass chamfer transform
+  const cost = metric === "euclidean" ? 1 : 1;
+  const diagCost = metric === "euclidean" ? Math.SQRT2 : metric === "chessboard" ? 1 : 2;
+
+  // Forward pass
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      let d = dist[i];
+      if (y > 0)             d = Math.min(d, dist[(y - 1) * W + x] + cost);
+      if (x > 0)             d = Math.min(d, dist[y * W + (x - 1)] + cost);
+      if (metric === "chessboard" && y > 0 && x > 0)
+        d = Math.min(d, dist[(y - 1) * W + (x - 1)] + 1);
+      if (metric === "manhattan" && y > 0 && x > 0)
+        d = Math.min(d, dist[(y - 1) * W + (x - 1)] + 2);
+      if (metric === "euclidean" && y > 0 && x > 0)
+        d = Math.min(d, dist[(y - 1) * W + (x - 1)] + diagCost);
+      dist[i] = d;
+    }
+  }
+  // Backward pass
+  for (let y = H - 1; y >= 0; y--) {
+    for (let x = W - 1; x >= 0; x--) {
+      const i = y * W + x;
+      let d = dist[i];
+      if (y < H - 1)         d = Math.min(d, dist[(y + 1) * W + x] + cost);
+      if (x < W - 1)         d = Math.min(d, dist[y * W + (x + 1)] + cost);
+      if (metric === "chessboard" && y < H - 1 && x < W - 1)
+        d = Math.min(d, dist[(y + 1) * W + (x + 1)] + 1);
+      if (metric === "manhattan" && y < H - 1 && x < W - 1)
+        d = Math.min(d, dist[(y + 1) * W + (x + 1)] + 2);
+      if (metric === "euclidean" && y < H - 1 && x < W - 1)
+        d = Math.min(d, dist[(y + 1) * W + (x + 1)] + diagCost);
+      dist[i] = d;
+    }
+  }
+
+  // Normalize to 0..255 and write back
+  let maxD = 1;
+  for (let i = 0; i < dist.length; i++) if (dist[i] < INF && dist[i] > maxD) maxD = dist[i];
+
+  for (let i = 0; i < dist.length; i++) {
+    const v = dist[i] >= INF ? 0 : Math.round((dist[i] / maxD) * 255);
+    const idx = i * 4;
+    p[idx] = p[idx + 1] = p[idx + 2] = v;
+    p[idx + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* =================================================================
+ * Synthetic helpers — for e-pix-rel grid
+ * ================================================================= */
+
+/** Draw a black dot at the center of a white canvas + a grid overlay */
+export function makeGridCanvas(
+  canvas: HTMLCanvasElement,
+  size = 320,
+  step = 20
+) {
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, size, size);
+
+  // grid
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= size; x += step) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, size);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= size; y += step) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(size, y);
+    ctx.stroke();
+  }
+
+  // center dot
+  const cx = size / 2;
+  const cy = size / 2;
+  ctx.fillStyle = "#000000";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
