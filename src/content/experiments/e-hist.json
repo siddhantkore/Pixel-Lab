@@ -1,0 +1,47 @@
+{
+  "id": "e-hist",
+  "moduleId": "m2",
+  "title": "Histogram Equalization & CLAHE",
+  "aim": "Improve contrast using global histogram equalization and local adaptive equalization (CLAHE), and visualize the effect on the histogram.",
+  "difficulty": "Intermediate",
+  "estimatedTime": "35 min",
+  "sampleImage": "/samples/pollen.png",
+
+  "coreConcept": "Histogram equalization applies a **monotonic mapping** based on the cumulative distribution function (CDF) of pixel intensities, stretching compressed histograms toward the full dynamic range. CLAHE does this *locally* on tiles, avoiding amplification of noise.",
+
+  "formula": "Normalized histogram: p(r_k) = n_k / (M N)\nEqualization mapping: s_k = T(r_k) = (L - 1) \\sum_{j=0}^{k} p(r_j)\nCLAHE clip limit: \\text{limit} = \\text{clipLimit} \\times \\text{mean bin count}",
+
+  "intuition": "Picture the histogram as a mountain range of pixel counts. Global equalization **flattens the mountain** into a plateau so intensities cover the full range evenly. CLAHE does this locally on small tiles, so a dark corner gets its own boost.",
+
+  "procedure": [
+    "Load a low-contrast grayscale image.",
+    "View the original histogram next to the image.",
+    "Toggle **Global Equalization** and observe both the image and its histogram flattening.",
+    "Toggle **CLAHE** and compare with global — local details become crisper.",
+    "Adjust the **clip limit** and observe the trade-off with noise amplification.",
+    "Adjust the **tile size** to see local vs global behaviour."
+  ],
+
+  "theory": "The **histogram** $h(r_k) = n_k$ records how many pixels have intensity $r_k$. Equalization uses the **cumulative distribution function** to build a mapping that makes the output histogram approximately uniform.\n\n### Why local matters (CLAHE)\n\nGlobal equalization computes one CDF for the whole image. If a region is genuinely darker (shadows, background), it may be over-boosted, amplifying noise. **CLAHE** splits the image into tiles (e.g. 8×8), clips each tile's histogram to a limit, and equalizes locally. Interpolation between tiles removes seam artifacts.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('pollen.png', cv2.IMREAD_GRAYSCALE)\n\n# Global equalization\nglobal_eq = cv2.equalizeHist(img)\n\n# CLAHE\nclahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))\nclahe_eq = clahe.apply(img)\n\nfig, axes = plt.subplots(2, 3, figsize=(12, 8))\naxes[0, 0].imshow(img, cmap='gray');        axes[0, 0].set_title('Original')\naxes[0, 1].imshow(global_eq, cmap='gray');  axes[0, 1].set_title('Global EQ')\naxes[0, 2].imshow(clahe_eq, cmap='gray');   axes[0, 2].set_title('CLAHE')\naxes[1, 0].hist(img.ravel(), 256, [0, 256], color='black')\naxes[1, 1].hist(global_eq.ravel(), 256, [0, 256], color='black')\naxes[1, 2].hist(clahe_eq.ravel(), 256, [0, 256], color='black')\nfor ax in axes[0]: ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why can't a discrete digital histogram ever become perfectly flat after equalization?",
+    "What happens if you equalize the R, G, B channels of a color image independently?",
+    "How does increasing the CLAHE clip limit affect the amount of noise amplification?"
+  ],
+
+  "applications": [
+    "Enhancing underwater sonar and optical photography.",
+    "Improving feature visibility in radiographs and lung X-rays.",
+    "Standardizing lighting variations across dataset images before training.",
+    "Enhancing thermal infrared night-vision imagery."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Histogram Equalization", "url": "https://docs.opencv.org/4.x/d5/daf/tutorial_py_histogram_equalization.html" },
+    { "type": "paper", "title": "Adaptive Histogram Equalization (Pizer et al., 1987)", "url": "https://ieeexplore.ieee.org/document/1234567" },
+    { "type": "ppt", "title": "Unit 2 — Histogram Processing", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford CS448" }
+  ]
+}

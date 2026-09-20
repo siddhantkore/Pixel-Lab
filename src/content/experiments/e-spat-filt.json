@@ -1,0 +1,47 @@
+{
+  "id": "e-spat-filt",
+  "moduleId": "m2",
+  "title": "Spatial Filtering — Smoothing & Denoising",
+  "aim": "Compare Box, Gaussian, Median and Bilateral smoothing filters, and observe their trade-off between noise suppression and edge preservation.",
+  "difficulty": "Intermediate",
+  "estimatedTime": "35 min",
+  "sampleImage": "/samples/circuit.png",
+
+  "coreConcept": "A spatial filter replaces each pixel by a weighted combination of its neighbors. **Linear filters** use fixed weights (mean, Gaussian). **Non-linear filters** (median) sort neighbors, preserving edges better against impulse noise.",
+
+  "formula": "Convolution: g(x, y) = \\sum_{s=-a}^{a} \\sum_{t=-b}^{b} w(s,t) f(x-s, y-t)\nGaussian: w(s,t) = \\frac{1}{2\\pi\\sigma^2} e^{-(s^2+t^2)/(2\\sigma^2)}\nMedian: g(x,y) = \\text{median}\\{ f(s,t) : (s,t) \\in N_{xy} \\}",
+
+  "intuition": "Imagine dragging a small window across the image. Mean and Gaussian blur *average* everything inside the window (including noise). Median picks the *middle* value, so an outlier pixel — like a bright speck — gets ignored entirely.",
+
+  "procedure": [
+    "Load an image (a noisy one works best).",
+    "Apply **Mean (box) blur** — observe uniform smoothing but edge blurring.",
+    "Apply **Gaussian blur** — smoother, edges better preserved than mean.",
+    "Apply **Median filter** — nearly perfect for salt-and-pepper noise.",
+    "Apply **Bilateral filter** — strong smoothing with edges intact.",
+    "Increase the kernel size and watch all filters degrade detail."
+  ],
+
+  "theory": "Spatial filters operate on a local neighborhood of each pixel. They come in two flavours:\n\n- **Linear** — a weighted sum. The mean filter uses uniform weights; Gaussian uses a bell-shaped kernel so nearby pixels matter more. Both blur edges because edges are high-frequency signals.\n- **Non-linear** — the median filter sorts neighbors and picks the middle value. Since noise outliers are at the extremes, the median rejects them. Excellent against **salt-and-pepper** noise.\n\nThe **bilateral filter** is linear in structure but uses *two* weights: one for spatial distance and one for intensity difference. Pixels far in colour contribute less, so edges survive.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('circuit.png', cv2.IMREAD_GRAYSCALE)\n\n# Add salt & pepper noise for demonstration\nnoisy = img.copy()\nn = 5000\ncoords = [np.random.randint(0, i - 1, n) for i in img.shape]\nnoisy[tuple(coords)] = 255\n\nbox      = cv2.blur(noisy, (5, 5))\ngauss    = cv2.GaussianBlur(noisy, (5, 5), 1.5)\nmedian   = cv2.medianBlur(noisy, 5)\nbilateral= cv2.bilateralFilter(img, 9, 75, 75)\n\nfig, axes = plt.subplots(2, 3, figsize=(12, 8))\naxes[0, 0].imshow(noisy, cmap='gray');     axes[0, 0].set_title('Noisy')\naxes[0, 1].imshow(box, cmap='gray');       axes[0, 1].set_title('Box blur')\naxes[0, 2].imshow(gauss, cmap='gray');     axes[0, 2].set_title('Gaussian blur')\naxes[1, 0].imshow(median, cmap='gray');    axes[1, 0].set_title('Median filter')\naxes[1, 1].imshow(bilateral, cmap='gray'); axes[1, 1].set_title('Bilateral filter')\naxes[1, 2].imshow(img, cmap='gray');       axes[1, 2].set_title('Original')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why must a 2D filtering kernel have odd dimensions (e.g. 3×3, 5×5)?",
+    "How does the bilateral filter decide whether a neighbor is 'close enough' to contribute?",
+    "For salt-and-pepper noise, why does the median filter outperform any linear filter?"
+  ],
+
+  "applications": [
+    "Denoising photos taken at high ISO in low light.",
+    "Preprocessing medical ultrasound and CT scans before segmentation.",
+    "Smoothing skin textures in beauty photography.",
+    "Removing speckle noise in radar and LIDAR scans."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Smoothing Images", "url": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html" },
+    { "type": "blog", "title": "Bilateral Filter in OpenCV — PyImageSearch", "url": "https://pyimagesearch.com/2021/01/20/opencv-bilateral-filter/" },
+    { "type": "paper", "title": "Bilateral Filtering (Tomasi & Manduchi, 1998)", "url": "https://ieeexplore.ieee.org/document/710815" }
+  ]
+}

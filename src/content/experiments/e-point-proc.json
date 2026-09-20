@@ -1,0 +1,47 @@
+{
+  "id": "e-point-proc",
+  "moduleId": "m2",
+  "title": "Point Processing & Intensity Transformations",
+  "aim": "Apply Intensity transforms — Negative, Log, Gamma, and Gray-Level Slicing — and observe how they reshape the intensity histogram.",
+  "difficulty": "Intermediate",
+  "estimatedTime": "35 min",
+  "sampleImage": "/samples/spine.png",
+
+  "coreConcept": "A point operation maps each pixel's intensity $r$ to a new intensity $s = T(r)$ **independently of neighbors**. The simplest transforms (negative, log, gamma) reshape the *transfer curve* between input and output intensities.",
+
+  "formula": "Negative: s = (L - 1) - r\nLog: s = c \\cdot \\log(1 + r), \\quad c = 255 / \\log(1 + r_{max})\nGamma: s = c \\cdot r^\\gamma\nSlicing: s = 255 \\text{ if } A \\le r \\le B, \\text{ else } r",
+
+  "intuition": "Think of each transform as a *bent ruler* between input and output brightness. The negative flips the ruler; log bends it to expand dark values; gamma curves it up or down; slicing highlights a specific band.",
+
+  "procedure": [
+    "Load a low-contrast grayscale image.",
+    "Apply **Negative** and observe the tone reversal.",
+    "Apply **Logarithmic** transform and note how shadows brighten.",
+    "Try **Gamma** with values below 1 (brightens) and above 1 (darkens).",
+    "Apply **Gray-Level Slicing** on the range 100–180 to highlight a structure.",
+    "Compare the histograms of the original vs each transform."
+  ],
+
+  "theory": "Point transforms are the atom of image enhancement. They are **memoryless**: each output pixel depends only on the corresponding input pixel.\n\n### Why each transform matters\n\n- **Negative** — useful for medical film displays where dense tissue should appear bright.\n- **Log** — compresses dynamic range so bright values don't saturate, but expands dark values. Great for Fourier spectra.\n- **Gamma** — the human eye's response to brightness is roughly logarithmic; gamma curves compensate for display non-linearity. $\\gamma < 1$ brightens shadows, $\\gamma > 1$ darkens highlights.\n- **Gray-level slicing** — highlights an intensity band (e.g. tumour density in MRI) while optionally preserving or zeroing everything else.\n\n### Curve shape matters\n\nEach transform defines a *curve* in the (input intensity, output intensity) plane. Steep regions of the curve expand contrast; flat regions compress it.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('spine.png', cv2.IMREAD_GRAYSCALE)\n\n# Negative\nneg = 255 - img\n\n# Log\nc = 255 / np.log(1 + np.max(img))\nlog_t = np.array(c * np.log(1 + img), dtype=np.uint8)\n\n# Gamma via LUT\ndef adjust_gamma(image, gamma):\n    inv = 1.0 / gamma\n    table = np.array([((i / 255.0) ** inv) * 255\n                      for i in range(256)]).astype('uint8')\n    return cv2.LUT(image, table)\n\ngamma_bright = adjust_gamma(img, 0.4)\ngamma_dark   = adjust_gamma(img, 2.2)\n\n# Gray-level slicing\nsliced = np.where((img >= 100) & (img <= 180), 255, img).astype('uint8')\n\nfig, axes = plt.subplots(2, 3, figsize=(12, 8))\naxes[0, 0].imshow(img, cmap='gray'); axes[0, 0].set_title('Original')\naxes[0, 1].imshow(neg, cmap='gray'); axes[0, 1].set_title('Negative')\naxes[0, 2].imshow(log_t, cmap='gray'); axes[0, 2].set_title('Log')\naxes[1, 0].imshow(gamma_bright, cmap='gray'); axes[1, 0].set_title('Gamma 0.4')\naxes[1, 1].imshow(gamma_dark, cmap='gray'); axes[1, 1].set_title('Gamma 2.2')\naxes[1, 2].imshow(sliced, cmap='gray'); axes[1, 2].set_title('Slicing [100,180]')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why is 1 added inside the logarithm $\\log(1 + r)$ instead of computing $\\log(r)$ directly?",
+    "The gamma curve for $\\gamma < 1$ brightens shadows but leaves whites almost unchanged. Why?",
+    "What is the difference between background-retaining and non-background-retaining gray-level slicing?"
+  ],
+
+  "applications": [
+    "Enhancing medical X-ray radiographs and mammograms.",
+    "Displaying high-dynamic-range Fourier frequency spectra.",
+    "Gamma calibration for consumer monitor panels.",
+    "Highlighting bone fracture tissue densities in CT scans."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Changing Contrast and Brightness", "url": "https://docs.opencv.org/4.x/d3/dc1/tutorial_basic_linear_transform.html" },
+    { "type": "blog", "title": "Gamma Correction with OpenCV — PyImageSearch", "url": "https://pyimagesearch.com/2015/10/05/opencv-gamma-correction/" },
+    { "type": "ppt", "title": "Unit 2 — Intensity Transformations", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford CS448" }
+  ]
+}
