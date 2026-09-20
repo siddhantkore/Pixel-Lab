@@ -1,0 +1,47 @@
+{
+  "id": "e-arith-bit",
+  "moduleId": "m1",
+  "title": "Arithmetic & Bitwise Image Operations",
+  "aim": "Perform image blending with adjustable weight, and use a bitwise circular mask to extract a region of interest.",
+  "difficulty": "Beginner",
+  "estimatedTime": "30 min",
+  "sampleImage": "/samples/lena.png",
+
+  "coreConcept": "Arithmetic combines two images numerically (with saturation, so 255 doesn't wrap). Bitwise operations act on the binary representation of pixels and are the foundation of **masking** — selecting part of an image.",
+
+  "formula": "Blend: g(x, y) = \\alpha f_1(x, y) + (1 - \\alpha) f_2(x, y)\nSaturating add: g = \\min(f_1 + f_2, 255)\nBitwise AND: I_{masked} = I \\land M",
+
+  "intuition": "Arithmetic is like stacking two translucent sheets — you can dial how much of each shows through. Bitwise masking is like laying a stencil over a photo: only the pixels where the stencil has holes survive.",
+
+  "procedure": [
+    "Load a color image.",
+    "Blend it with its own negative using the alpha slider — observe the crossover.",
+    "Blend to 0.5 for a 50/50 mix.",
+    "Apply a circular bitwise mask and observe the outside area going black.",
+    "Shrink the mask radius and observe the region of interest narrowing.",
+    "Reset and compare blending vs masking."
+  ],
+
+  "theory": "**Arithmetic operations** combine pixel values from two images. In 8-bit arithmetic, adding `250 + 20` naively wraps to `14` (modulo 256). OpenCV's `cv2.add` *saturates*: the result is clamped to 255. This is what you want almost always.\n\n**Bitwise operations** — AND, OR, XOR, NOT — act on the binary representation of each pixel. The AND operation with a binary mask $M$ (0 or 255) keeps pixels inside the mask and zeroes pixels outside. This is the standard way to extract a **region of interest** (ROI).\n\n### Why blending matters\n\nWeighted blending $g = \\alpha f_1 + (1-\\alpha) f_2$ is the basis of:\n\n- Cross-fades in video editing\n- Watermarking (low-alpha logo overlay)\n- Motion detection (blend current frame with background to see change)",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('lenna.png')\nh, w, _ = img.shape\n\n# Circular mask\nmask = np.zeros((h, w), dtype=np.uint8)\ncv2.circle(mask, (w // 2, h // 2), 120, 255, -1)\n\n# Blend with negative\nnegative = 255 - img\nblended = cv2.addWeighted(img, 0.6, negative, 0.4, 0)\n\n# Bitwise AND\nmasked = cv2.bitwise_and(img, img, mask=mask)\n\nfig, axes = plt.subplots(1, 3, figsize=(12, 4))\naxes[0].imshow(mask, cmap='gray'); axes[0].set_title('Circular mask')\naxes[1].imshow(cv2.cvtColor(blended, cv2.COLOR_BGR2RGB)); axes[1].set_title('Blend 0.6 / 0.4')\naxes[2].imshow(cv2.cvtColor(masked, cv2.COLOR_BGR2RGB)); axes[2].set_title('Masked ROI')\nfor ax in axes: ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why does `cv2.add` differ from the plain `+` operator on NumPy arrays?",
+    "How would you use image subtraction to detect motion in a surveillance feed?",
+    "What happens if you apply a bitwise AND with a mask that is all ones (255)?"
+  ],
+
+  "applications": [
+    "Watermarking digital media and logo overlays.",
+    "Motion detection by frame subtraction in surveillance.",
+    "Isolating tumor regions in medical scans using ROI masks.",
+    "Green-screen background replacement (chroma keying)."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Arithmetic Operations", "url": "https://docs.opencv.org/4.x/d0/d86/tutorial_py_image_arithmetics.html" },
+    { "type": "docs", "title": "OpenCV — Bitwise Operations", "url": "https://docs.opencv.org/4.x/d0/d86/tutorial_py_image_arithmetics.html#autotoc_md57" },
+    { "type": "blog", "title": "Image Masking with OpenCV — PyImageSearch", "url": "https://pyimagesearch.com/2021/01/19/image-masking-with-opencv/" }
+  ]
+}

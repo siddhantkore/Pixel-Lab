@@ -1,0 +1,47 @@
+{
+  "id": "e-io-geo",
+  "moduleId": "m1",
+  "title": "Image I/O & Geometric Operations",
+  "aim": "Perform spatial transformations — rotation, transposition, flipping, and resizing — and observe how pixel coordinates are remapped.",
+  "difficulty": "Beginner",
+  "estimatedTime": "30 min",
+  "sampleImage": "/samples/lena.png",
+
+  "coreConcept": "Geometric operations transform spatial pixel coordinates $(x, y)$ into new positions $(x', y')$ using affine matrices and interpolation. Unlike intensity operations, they rearrange *where* pixels sit, not *what they contain*.",
+
+  "formula": "Rotation: \\begin{bmatrix} x' \\\\ y' \\end{bmatrix} = \\begin{bmatrix} \\cos\\theta & -\\sin\\theta \\\\ \\sin\\theta & \\cos\\theta \\end{bmatrix} \\begin{bmatrix} x \\\\ y \\end{bmatrix}\nTranspose: I^T[x, y] = I[y, x]\nScale: x' = s_x \\cdot x, \\quad y' = s_y \\cdot y",
+
+  "intuition": "Think of rearranging a photo on a light table: you can rotate it 90°, flip it over, or slide it through a resizing frame. The photo's content is untouched — only the arrangement of pixels changes.",
+
+  "procedure": [
+    "Load or upload a color image.",
+    "Apply **90° clockwise rotation** and note the swapped width/height.",
+    "Apply **transposition** and compare it with a rotated + flipped image.",
+    "Flip the image **horizontally** and then **vertically**.",
+    "Resize the image to **300×300** and observe aspect-ratio distortion.",
+    "Compare smooth (bilinear) versus nearest-neighbor interpolation for the resize."
+  ],
+
+  "theory": "Every geometric operation can be expressed as a **coordinate mapping**. Rotation uses a 2D rotation matrix applied to each pixel coordinate. Transposition swaps rows and columns (equivalent to a reflection along the main diagonal). Flipping mirrors along a horizontal or vertical axis. Resizing maps source coordinates onto a target grid, requiring *interpolation* to determine the value at each target pixel.\n\n### Why is interpolation required?\n\nWhen you resize or rotate by an angle, the target coordinate $(x', y')$ rarely lands exactly on an integer source pixel. Interpolation estimates the source intensity from neighboring pixels. Common choices:\n\n- **Nearest neighbor** — fastest, produces blocky output\n- **Bilinear** — smooth, averages 4 neighbors\n- **Bicubic** — smoother, averages 16 neighbors\n\n### Where does the aspect ratio go wrong?\n\nResizing to `(300, 300)` when the source is `(640, 480)` *stretches* the image horizontally because the horizontal scale factor is larger than the vertical one. Preserve aspect ratio by computing `newH = newW * (H/W)`.",
+
+  "pythonCode": "import cv2\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('lenna.png')\nimg_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)\n\nrot_90 = cv2.rotate(img_rgb, cv2.ROTATE_90_CLOCKWISE)\ntransposed = cv2.transpose(img_rgb)\nflipped_h = cv2.flip(img_rgb, 1)\nresized = cv2.resize(img_rgb, (300, 300), interpolation=cv2.INTER_AREA)\n\nfig, axes = plt.subplots(2, 2, figsize=(8, 8))\naxes[0, 0].imshow(rot_90); axes[0, 0].set_title('Rotated 90°')\naxes[0, 1].imshow(transposed); axes[0, 1].set_title('Transposed')\naxes[1, 0].imshow(flipped_h); axes[1, 0].set_title('Flipped Horizontally')\naxes[1, 1].imshow(resized); axes[1, 1].set_title('Resized 300x300')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why does combining a matrix transpose with a horizontal flip equal a 90° clockwise rotation?",
+    "Which interpolation method is optimal for shrinking an image versus zooming into details?",
+    "How does aspect-ratio distortion affect feature extraction in downstream computer-vision tasks?"
+  ],
+
+  "applications": [
+    "Data augmentation in deep-learning training (flipping, rotation, zooming).",
+    "Correcting camera orientation tags in automated photo-upload pipelines.",
+    "Medical image registration — aligning CT/MRI scans to a common frame.",
+    "Satellite image orthorectification and spatial scaling."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "Geometric Transformations — OpenCV", "url": "https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html" },
+    { "type": "ppt", "title": "Unit 1 — Geometric Transformations", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford CS448" },
+    { "type": "blog", "title": "Image Resizing Interpolation Methods — PyImageSearch", "url": "https://pyimagesearch.com/2021/01/20/opencv-resize-image-cv2-resize/" }
+  ]
+}

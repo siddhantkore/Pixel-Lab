@@ -1,0 +1,47 @@
+{
+  "id": "e-pix-chan",
+  "moduleId": "m1",
+  "title": "Pixel Slicing & Channel Operations",
+  "aim": "Isolate color channels (B, G, R) and adjust brightness and contrast with linear point operations.",
+  "difficulty": "Beginner",
+  "estimatedTime": "30 min",
+  "sampleImage": "/samples/lena.png",
+
+  "coreConcept": "A color image is three stacked 2D intensity maps — one per channel. You can inspect, zero, or combine them. Linear point operations $g = \\alpha f + \\beta$ change **contrast** ($\\alpha$) and **brightness** ($\\beta$) independently of position.",
+
+  "formula": "Linear scaling: g(x, y) = \\alpha \\cdot f(x, y) + \\beta\nLuminance: Y = 0.299 R + 0.587 G + 0.114 B\nChannel zeroing: I[:, :, c] = 0",
+
+  "intuition": "Picture three transparent colored sheets — red, green, blue — stacked into one image. Removing two sheets leaves a pure single-color view. Turning up $\\beta$ shifts every pixel lighter; turning up $\\alpha$ spreads values away from the middle, increasing contrast.",
+
+  "procedure": [
+    "Load a color image.",
+    "Isolate each channel (Red, Green, Blue) in turn and observe what remains.",
+    "Set brightness $\\beta$ and observe the entire image shift lighter/darker.",
+    "Set contrast $\\alpha > 1$ and observe values spreading apart.",
+    "Set contrast $\\alpha < 1$ and observe the image flattening toward gray.",
+    "Reset and compare the effect of brightness vs contrast."
+  ],
+
+  "theory": "Color images in OpenCV are stored as $M \\times N \\times 3$ arrays with channel order **BGR**. Each channel is an independent $M \\times N$ grayscale image. Zeroing a channel is a matrix operation: `I[:, :, 1] = 0` removes all green.\n\n### Brightness vs contrast — two different knobs\n\n- **Brightness** is additive: `g = f + β`. It shifts all pixels up or down. Values are clamped at 0 and 255, so pushing too far washes out highlights or crushes shadows.\n- **Contrast** is multiplicative: `g = α f`. Values spread away from 0 when `α > 1` and shrink toward 0 when `α < 1`.\n\nCombining them: `g = α f + β`. This is the fundamental linear point operation.",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('lenna.png')\n\nblue_img = img.copy();  blue_img[:, :, 1] = 0;  blue_img[:, :, 2] = 0\ngreen_img = img.copy(); green_img[:, :, 0] = 0; green_img[:, :, 2] = 0\nred_img = img.copy();   red_img[:, :, 0] = 0;   red_img[:, :, 1] = 0\n\nalpha, beta = 1.5, 30\nenhanced = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)\n\nfig, axes = plt.subplots(2, 2, figsize=(8, 8))\naxes[0, 0].imshow(cv2.cvtColor(blue_img, cv2.COLOR_BGR2RGB));  axes[0, 0].set_title('Blue only')\naxes[0, 1].imshow(cv2.cvtColor(green_img, cv2.COLOR_BGR2RGB)); axes[0, 1].set_title('Green only')\naxes[1, 0].imshow(cv2.cvtColor(red_img, cv2.COLOR_BGR2RGB));   axes[1, 0].set_title('Red only')\naxes[1, 1].imshow(cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB));  axes[1, 1].set_title(f'α={alpha}, β={beta}')\nfor ax in axes.ravel(): ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why does zeroing Green and Red channels produce a pure Blue image?",
+    "What happens in 8-bit arithmetic when `β = 50` pushes a pixel above 255?",
+    "Why is contrast scaling (`α > 1`) sometimes called a *dynamic range expansion*?"
+  ],
+
+  "applications": [
+    "Isolating color markers in agricultural crop-disease detection.",
+    "Enhancing low-contrast X-rays and mammograms for radiologist review.",
+    "Preprocessing multi-spectral satellite bands for vegetation indices (NDVI).",
+    "Correcting underwater photo color attenuation."
+  ],
+
+  "resources": [
+    { "type": "docs", "title": "OpenCV — Arithmetic Operations on Images", "url": "https://docs.opencv.org/4.x/d0/d86/tutorial_py_image_arithmetics.html" },
+    { "type": "blog", "title": "Splitting and Merging Image Channels — PyImageSearch", "url": "https://pyimagesearch.com/2021/01/23/splitting-and-merging-channels-with-opencv/" },
+    { "type": "ppt", "title": "Unit 1 — Pixel Operations", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford CS448" }
+  ]
+}

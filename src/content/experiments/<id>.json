@@ -1,0 +1,43 @@
+{
+  "id": "e-xxx",
+  "moduleId": "m1",
+  "title": "Short Title",
+  "aim": "One-sentence learning objective.",
+  "difficulty": "Beginner | Intermediate | Advanced",
+  "estimatedTime": "25 min",
+  "sampleImage": "/samples/lena.png",
+
+  "coreConcept": "**Bold key term** and what it is in 2–3 sentences. Use $math$ if needed.",
+
+  "formula": "Formula 1: y = f(x)\nFormula 2: z = \\sum_{i} x_i",
+
+  "intuition": "One-analogy explanation a first-year student can visualize.",
+
+  "procedure": [
+    "Step one in imperative voice.",
+    "Step two.",
+    "Step three."
+  ],
+
+  "theory": "Multi-paragraph theory with `\\n\\n` between paragraphs. Supports **bold**, *italic*, `code`, tables, lists, and $inline math$.\n\n### Subheading\n\nDetails...",
+
+  "pythonCode": "import cv2\n...",
+
+  "thinkAbout": [
+    "Question that requires applying the concept.",
+    "Question about edge case.",
+    "Question linking to a related topic."
+  ],
+
+  "applications": [
+    "Real-world use case 1.",
+    "Real-world use case 2."
+  ],
+
+  "resources": [
+    { "type": "ppt",   "title": "Stanford CS448 — Topic", "url": "https://...", "source": "Stanford" },
+    { "type": "paper", "title": "Original paper",         "url": "https://..." },
+    { "type": "docs",  "title": "OpenCV docs",            "url": "https://..." },
+    { "type": "blog",  "title": "PyImageSearch tutorial", "url": "https://..." }
+  ]
+}

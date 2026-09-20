@@ -1,0 +1,46 @@
+{
+  "id": "e-sq",
+  "moduleId": "m1",
+  "title": "Sampling & Quantization",
+  "aim": "Digitize a continuous image into pixels (sampling) and intensity levels (quantization), and observe the visual cost of each.",
+  "difficulty": "Beginner",
+  "estimatedTime": "25 min",
+  "sampleImage": "/samples/cameraman.png",
+
+  "coreConcept": "**Sampling** turns continuous space into a finite grid of points. **Quantization** turns continuous intensity into a finite set of levels. Together they define a digital image's *resolution* — spatially and tonally.",
+
+  "formula": "Sampled: f_s[m, n] = f(m\\cdot\\Delta x, n\\cdot\\Delta y)\nQuantized: q = \\text{round}(f_s / \\Delta) \\cdot \\Delta\nBits: B = M \\cdot N \\cdot k",
+
+  "intuition": "Picture the image painted on graph paper. Sampling decides **how big each square** is. Quantization decides **how many gray shades** you're allowed to paint with.",
+
+  "procedure": [
+    "Load or upload a grayscale-friendly image.",
+    "Increase the **downsample factor** and watch the image block up.",
+    "Reduce the **quantization levels** and watch banding appear.",
+    "Find the point where the image becomes unrecognizable.",
+    "Compare the two effects: which one blurs? Which creates false edges?"
+  ],
+
+  "theory": "A computer stores finite numbers, so a continuous image must be discretized. Two independent knobs:\n\n1. **Sampling** — how many pixels cover the scene. Nyquist says you need at least 2 samples per period of the highest-frequency detail; too few causes **aliasing** (jagged edges).\n2. **Quantization** — how many intensity levels each pixel can take. $k$ bits per pixel gives $2^k$ levels. Too few creates **false contours** (visible banding).\n\nFile size grows as $M \\cdot N \\cdot k$ — both resolutions are costly.\n\n### Visual signature of each\n\n| Too few samples | Too few levels |\n| --------------- | -------------- |\n| Blocky pixels | Smooth banding |\n| Jagged edges | False contours |\n| Loss of fine texture | Loss of subtle gradient |",
+
+  "pythonCode": "import cv2\nimport numpy as np\nimport matplotlib.pyplot as plt\n\nimg = cv2.imread('cameraman.png', cv2.IMREAD_GRAYSCALE)\nh, w = img.shape\n\n# Downsample by 4, then upsample to view pixelation\nsmall = cv2.resize(img, (w // 4, h // 4), interpolation=cv2.INTER_NEAREST)\nupsampled = cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)\n\n# Quantize to 4 gray levels\nlevels = 4\nstep = 256 // levels\nquantized = (img // step) * step + step // 2\n\nfig, axes = plt.subplots(1, 3, figsize=(12, 4))\naxes[0].imshow(img, cmap='gray'); axes[0].set_title('Original')\naxes[1].imshow(upsampled, cmap='gray'); axes[1].set_title('1/4 spatial resolution')\naxes[2].imshow(quantized, cmap='gray'); axes[2].set_title(f'{levels} gray levels')\nfor ax in axes: ax.axis('off')\nplt.tight_layout(); plt.show()",
+
+  "thinkAbout": [
+    "Why does downsampling look blocky but quantization looks banded — even though both lose information?",
+    "The Nyquist criterion says sample at 2× the highest frequency. What is 'frequency' in an image?",
+    "If you had to halve file size, would you halve spatial resolution or tonal resolution? Why?"
+  ],
+
+  "applications": [
+    "Choosing camera megapixels for print vs web.",
+    "JPEG / MP3 compression (both operate on quantized coefficients).",
+    "Medical imaging: bit depth directly affects diagnostic accuracy.",
+    "Display panels: 8-bit vs 10-bit HDR."
+  ],
+
+  "resources": [
+    { "type": "ppt", "title": "Sampling & Quantization — Stanford CS448", "url": "https://web.stanford.edu/class/cs448f/lectures/", "source": "Stanford" },
+    { "type": "paper", "title": "Fundamentals of Digital Image Processing (Jain, 1989)", "url": "https://www.ece.ucsb.edu/Faculty/Rabbani/classes/ece178/fundamentals_of_digital_image_processing.pdf" },
+    { "type": "blog", "title": "Sampling & Quantization — TutorialsPoint", "url": "https://www.tutorialspoint.com/dip/concept_of_sampling_and_quantization.htm" }
+  ]
+}
